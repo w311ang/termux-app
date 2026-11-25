@@ -116,6 +116,16 @@ public class TermuxAppSharedPreferences {
 
 
 
+    public boolean shouldKillProcessesOnVpnDisconnect() {
+        return SharedPreferenceUtils.getBoolean(mSharedPreferences, TERMUX_APP.KEY_KILL_PROCESSES_ON_VPN_DISCONNECT, TERMUX_APP.DEFAULT_VALUE_KILL_PROCESSES_ON_VPN_DISCONNECT);
+    }
+
+    public void setKillProcessesOnVpnDisconnect(boolean value) {
+        SharedPreferenceUtils.setBoolean(mSharedPreferences, TERMUX_APP.KEY_KILL_PROCESSES_ON_VPN_DISCONNECT, value, false);
+    }
+
+
+
     public boolean shouldKeepScreenOn() {
         return SharedPreferenceUtils.getBoolean(mSharedPreferences, TERMUX_APP.KEY_KEEP_SCREEN_ON, TERMUX_APP.DEFAULT_VALUE_KEEP_SCREEN_ON);
     }

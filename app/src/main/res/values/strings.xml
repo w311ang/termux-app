@@ -180,6 +180,18 @@
                     no hardware keyboard is connected.</string>
 
 
+        <!-- Network Category -->
+        <string name="termux_network_header">Network</string>
+
+            <!-- Kill Processes On VPN Disconnect -->
+            <string name="termux_kill_processes_on_vpn_disconnect_title">Kill Processes On VPN Disconnect</string>
+            <string name="termux_kill_processes_on_vpn_disconnect_off">Processes keep running when the VPN
+                disconnects and may connect to the network directly.</string>
+            <string name="termux_kill_processes_on_vpn_disconnect_on">Immediately kill all &TERMUX_APP_NAME;
+                processes when the VPN disconnects, to avoid leaking connections outside the VPN. (Default)</string>
+            <string name="msg_vpn_kill_switch_triggered">VPN disconnected: all &TERMUX_APP_NAME; processes were killed</string>
+
+
         <!-- Terminal View Preferences -->
         <string name="termux_terminal_view_preferences_title">Terminal View</string>
         <string name="termux_terminal_view_preferences_summary">Preferences for terminal view</string>

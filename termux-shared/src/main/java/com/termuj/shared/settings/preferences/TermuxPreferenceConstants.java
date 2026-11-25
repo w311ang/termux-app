@@ -120,6 +120,15 @@ public final class TermuxPreferenceConstants {
 
 
         /**
+         * Defines the key for whether all processes of the app's uid should be killed with SIGKILL
+         * when the default network of the app stops going through a VPN, to avoid leaking
+         * connections outside the VPN.
+         */
+        public static final String KEY_KILL_PROCESSES_ON_VPN_DISCONNECT = "kill_processes_on_vpn_disconnect";
+        public static final boolean DEFAULT_VALUE_KILL_PROCESSES_ON_VPN_DISCONNECT = true;
+
+
+        /**
          * Defines the key for font size of termux terminal view.
          */
         public static final String KEY_FONTSIZE = "fontsize";

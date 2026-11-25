@@ -46,4 +46,33 @@ class TermuxPreferencesDataStore extends PreferenceDataStore {
         return mInstance;
     }
 
+
+
+    @Override
+    public void putBoolean(String key, boolean value) {
+        if (mPreferences == null) return;
+        if (key == null) return;
+
+        switch (key) {
+            case "kill_processes_on_vpn_disconnect":
+                mPreferences.setKillProcessesOnVpnDisconnect(value);
+                break;
+            default:
+                break;
+        }
+    }
+
+    @Override
+    public boolean getBoolean(String key, boolean defValue) {
+        if (mPreferences == null) return defValue;
+        if (key == null) return defValue;
+
+        switch (key) {
+            case "kill_processes_on_vpn_disconnect":
+                return mPreferences.shouldKillProcessesOnVpnDisconnect();
+            default:
+                return defValue;
+        }
+    }
+
 }

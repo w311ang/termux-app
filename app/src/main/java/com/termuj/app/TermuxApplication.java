@@ -16,6 +16,9 @@ public class TermuxApplication extends Application {
 
         // Set log level for the app
         setLogLevel();
+
+        // Kill all processes of the app uid when the VPN goes away (toggle in settings, default on)
+        VpnKillSwitch.start(this);
     }
 
     private void setLogLevel() {
