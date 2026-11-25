@@ -399,6 +399,24 @@ public final class TermuxService extends Service implements TermuxTask.TermuxTas
 
 
 
+    /**
+     * Refuse to start any process while the VPN kill switch is enabled and no VPN is active.
+     * Plugin callers get the failure reported back as usual.
+     */
+    private boolean isExecutionBlockedByVpnKillSwitch(ExecutionCommand executionCommand) {
+        if (!VpnKillSwitch.shouldBlockExecution(this)) return false;
+
+        String errmsg = getString(R.string.msg_vpn_kill_switch_blocked_execution);
+        Logger.logError(LOG_TAG, errmsg + ": " + executionCommand.getCommandIdAndLabelLogString());
+        if (executionCommand.isPluginExecutionCommand) {
+            executionCommand.setStateFailed(Errno.ERRNO_FAILED.getCode(), errmsg);
+            PluginUtils.processPluginExecutionCommandError(this, LOG_TAG, executionCommand, false);
+        } else {
+            Logger.showToast(this, errmsg, true);
+        }
+        return true;
+    }
+
     /** Execute a shell command in background {@link TermuxTask}. */
     private void executeTermuxTaskCommand(ExecutionCommand executionCommand) {
         if (executionCommand == null) return;
@@ -425,6 +443,8 @@ public final class TermuxService extends Service implements TermuxTask.TermuxTas
             Logger.logDebug(LOG_TAG, "Ignoring a foreground execution command passed to createTermuxTask()");
             return null;
         }
+
+        if (isExecutionBlockedByVpnKillSwitch(executionCommand)) return null;
 
         if (Logger.getLogLevel() >= Logger.LOG_LEVEL_VERBOSE)
             Logger.logVerboseExtended(LOG_TAG, executionCommand.toString());
@@ -517,6 +537,8 @@ public final class TermuxService extends Service implements TermuxTask.TermuxTas
             Logger.logDebug(LOG_TAG, "Ignoring a background execution command passed to createTermuxSession()");
             return null;
         }
+
+        if (isExecutionBlockedByVpnKillSwitch(executionCommand)) return null;
 
         if (Logger.getLogLevel() >= Logger.LOG_LEVEL_VERBOSE)
             Logger.logVerboseExtended(LOG_TAG, executionCommand.toString());

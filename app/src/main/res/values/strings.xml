@@ -188,8 +188,16 @@
             <string name="termux_kill_processes_on_vpn_disconnect_off">Processes keep running when the VPN
                 disconnects and may connect to the network directly.</string>
             <string name="termux_kill_processes_on_vpn_disconnect_on">Immediately kill all &TERMUX_APP_NAME;
-                processes when the VPN disconnects, to avoid leaking connections outside the VPN. (Default)</string>
+                processes when the VPN disconnects, and refuse to start any shell or command while no VPN
+                is connected, to avoid leaking connections outside the VPN. (Default)</string>
             <string name="msg_vpn_kill_switch_triggered">VPN disconnected: all &TERMUX_APP_NAME; processes were killed</string>
+            <string name="msg_vpn_kill_switch_blocked_execution">VPN is not connected: refusing to start &TERMUX_APP_NAME; processes</string>
+            <string name="title_vpn_not_connected">VPN Not Connected</string>
+            <string name="msg_vpn_not_connected">\"Kill Processes On VPN Disconnect\" is enabled and no VPN is
+                connected, so no shell was started. Connect the VPN and retry, or turn the setting off.</string>
+            <string name="action_vpn_retry">Retry</string>
+            <string name="action_vpn_open_settings">Settings</string>
+            <string name="action_vpn_exit">Exit</string>
 
 
         <!-- Terminal View Preferences -->

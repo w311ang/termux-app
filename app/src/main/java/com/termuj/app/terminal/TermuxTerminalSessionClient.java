@@ -5,6 +5,7 @@ import android.app.AlertDialog;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Typeface;
 import android.media.AudioAttributes;
@@ -20,6 +21,8 @@ import com.termuj.app.TermuxActivity;
 import com.termuj.shared.terminal.TermuxTerminalSessionClientBase;
 import com.termuj.shared.termux.TermuxConstants;
 import com.termuj.app.TermuxService;
+import com.termuj.app.VpnKillSwitch;
+import com.termuj.app.activities.SettingsActivity;
 import com.termuj.shared.settings.properties.TermuxPropertyConstants;
 import com.termuj.shared.terminal.io.BellHandler;
 import com.termuj.shared.logger.Logger;
@@ -332,7 +335,9 @@ public class TermuxTerminalSessionClient extends TermuxTerminalSessionClientBase
         TermuxService service = mActivity.getTermuxService();
         if (service == null) return;
 
-        if (service.getTermuxSessionsSize() >= MAX_SESSIONS) {
+        if (VpnKillSwitch.shouldBlockExecution(mActivity)) {
+            showVpnNotConnectedDialog(service, isFailSafe, sessionName);
+        } else if (service.getTermuxSessionsSize() >= MAX_SESSIONS) {
             new AlertDialog.Builder(mActivity).setTitle(R.string.title_max_terminals_reached).setMessage(R.string.msg_max_terminals_reached)
                 .setPositiveButton(android.R.string.ok, null).show();
         } else {
@@ -353,6 +358,28 @@ public class TermuxTerminalSessionClient extends TermuxTerminalSessionClientBase
 
             mActivity.getDrawer().closeDrawers();
         }
+    }
+
+    /**
+     * The VPN kill switch is enabled but no VPN is active, so no shell is started. Let the user
+     * retry once the VPN is up, open settings to turn the kill switch off, or leave. Without any
+     * existing session there is nothing to go back to, so the dialog can't be dismissed then.
+     */
+    private void showVpnNotConnectedDialog(TermuxService service, boolean isFailSafe, String sessionName) {
+        boolean noSessions = service.isTermuxSessionsEmpty();
+        new AlertDialog.Builder(mActivity)
+            .setTitle(R.string.title_vpn_not_connected)
+            .setMessage(R.string.msg_vpn_not_connected)
+            .setCancelable(!noSessions)
+            .setPositiveButton(R.string.action_vpn_retry, (dialog, which) -> addNewSession(isFailSafe, sessionName))
+            .setNeutralButton(R.string.action_vpn_open_settings, (dialog, which) -> {
+                mActivity.startActivity(new Intent(mActivity, SettingsActivity.class));
+                if (noSessions) mActivity.finishActivityIfNotFinishing();
+            })
+            .setNegativeButton(noSessions ? R.string.action_vpn_exit : android.R.string.cancel, (dialog, which) -> {
+                if (noSessions) mActivity.finishActivityIfNotFinishing();
+            })
+            .show();
     }
 
     public void setCurrentStoredSession() {

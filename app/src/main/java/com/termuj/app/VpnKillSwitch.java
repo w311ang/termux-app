@@ -22,9 +22,10 @@ import com.termuj.shared.settings.preferences.TermuxAppSharedPreferences;
  * the terminal, and plugins sharing the uid) as soon as the app's default network stops going
  * through a VPN, so that they can not keep talking to the outside network directly.
  *
- * It only reacts to a VPN -> non-VPN transition (or loss of the VPN network). Starting the app
- * without any VPN does nothing, so the default-on setting does not get in the way of users that
- * never use a VPN.
+ * The kill is triggered by a VPN -> non-VPN transition (or loss of the VPN network). In addition,
+ * while the setting is enabled and no VPN is active, {@link #shouldBlockExecution(Context)} makes
+ * {@link TermuxService} refuse to start any new session or command, so with no VPN at app start
+ * not even the shell is started.
  *
  * The {@link TermuxAppSharedPreferences#shouldKillProcessesOnVpnDisconnect()} setting is read at
  * the moment of the transition, so toggling it takes effect immediately.
@@ -66,6 +67,26 @@ public final class VpnKillSwitch {
         } catch (RuntimeException e) {
             Logger.logStackTraceWithMessage(LOG_TAG, "Failed to register default network callback", e);
         }
+    }
+
+    /**
+     * Whether starting a new process (terminal session, background task, plugin command) must be
+     * refused: the kill switch is enabled and the app's default network does not go through a VPN.
+     */
+    public static boolean shouldBlockExecution(@NonNull Context context) {
+        TermuxAppSharedPreferences preferences = TermuxAppSharedPreferences.build(context);
+        if (preferences == null || !preferences.shouldKillProcessesOnVpnDisconnect()) return false;
+        return !isVpnActive(context);
+    }
+
+    /** Whether the default network of the app's uid currently goes through a VPN. */
+    public static boolean isVpnActive(@NonNull Context context) {
+        ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+        if (cm == null) return false;
+        Network network = cm.getActiveNetwork();
+        if (network == null) return false;
+        NetworkCapabilities caps = cm.getNetworkCapabilities(network);
+        return caps != null && caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN);
     }
 
     private void register() {
