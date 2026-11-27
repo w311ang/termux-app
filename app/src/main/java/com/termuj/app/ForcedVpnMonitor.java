@@ -9,6 +9,7 @@ import androidx.annotation.Nullable;
 import com.termuj.shared.logger.Logger;
 
 import java.io.FileDescriptor;
+import java.io.InterruptedIOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Objects;
@@ -66,7 +67,7 @@ final class ForcedVpnMonitor {
     static Boolean queryForced(int uid) {
         try {
             return hasProhibitRule(OsConstants.AF_INET, uid) && hasProhibitRule(OsConstants.AF_INET6, uid);
-        } catch (ErrnoException | RuntimeException e) {
+        } catch (ErrnoException | InterruptedIOException | RuntimeException e) {
             Logger.logStackTraceWithMessage(LOG_TAG, "Failed to read routing rules", e);
             return null;
         }
@@ -88,7 +89,7 @@ final class ForcedVpnMonitor {
             readDump(fd, uid);
             Os.setsockoptInt(fd, SOL_NETLINK, NETLINK_ADD_MEMBERSHIP, RTNLGRP_IPV4_RULE);
             Os.setsockoptInt(fd, SOL_NETLINK, NETLINK_ADD_MEMBERSHIP, RTNLGRP_IPV6_RULE);
-        } catch (ErrnoException | RuntimeException e) {
+        } catch (ErrnoException | InterruptedIOException | RuntimeException e) {
             Logger.logStackTraceWithMessage(LOG_TAG, "Failed to subscribe to routing rule changes", e);
             closeQuietly(fd);
             listener.onForcedVpnStateChanged(null);
@@ -106,6 +107,8 @@ final class ForcedVpnMonitor {
             try {
                 int n = Os.read(fd, buf, 0, buf.length);
                 recheck = n > 0 && containsRelevantRuleChange(buf, n, uid);
+            } catch (InterruptedIOException e) {
+                continue;
             } catch (ErrnoException e) {
                 if (e.errno == OsConstants.EINTR) continue;
                 if (e.errno == OsConstants.ENOBUFS) {
@@ -129,7 +132,7 @@ final class ForcedVpnMonitor {
         }
     }
 
-    private static boolean hasProhibitRule(int family, int uid) throws ErrnoException {
+    private static boolean hasProhibitRule(int family, int uid) throws ErrnoException, InterruptedIOException {
         FileDescriptor fd = openSocket();
         try {
             sendDumpRequest(fd, family);
@@ -144,7 +147,7 @@ final class ForcedVpnMonitor {
         return Os.socket(OsConstants.AF_NETLINK, OsConstants.SOCK_RAW | OsConstants.SOCK_CLOEXEC, NETLINK_ROUTE);
     }
 
-    private static void sendDumpRequest(FileDescriptor fd, int family) throws ErrnoException {
+    private static void sendDumpRequest(FileDescriptor fd, int family) throws ErrnoException, InterruptedIOException {
         ByteBuffer b = ByteBuffer.allocate(NLMSG_HDRLEN + FIB_RULE_HDRLEN).order(ByteOrder.nativeOrder());
         b.putInt(NLMSG_HDRLEN + FIB_RULE_HDRLEN); // nlmsg_len
         b.putShort((short) RTM_GETRULE);         // nlmsg_type
@@ -157,7 +160,7 @@ final class ForcedVpnMonitor {
     }
 
     /** Read a dump reply until NLMSG_DONE, returning whether a prohibit rule covers uid. */
-    private static boolean readDump(FileDescriptor fd, int uid) throws ErrnoException {
+    private static boolean readDump(FileDescriptor fd, int uid) throws ErrnoException, InterruptedIOException {
         byte[] buf = new byte[BUFFER_SIZE];
         boolean found = false;
         while (true) {
