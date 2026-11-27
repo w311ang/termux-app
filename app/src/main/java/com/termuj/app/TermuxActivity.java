@@ -272,6 +272,18 @@ public final class TermuxActivity extends Activity implements ServiceConnection 
             addTermuxActivityRootViewGlobalLayoutListener();
 
         registerTermuxActivityBroadcastReceiver();
+
+        // Show forced VPN warnings raised while not visible, and any new ones while visible.
+        VpnKillSwitch.setWarningPresenter(this::showVpnWarning);
+    }
+
+    private void showVpnWarning(int titleResId, int messageResId) {
+        if (isFinishing()) return;
+        new AlertDialog.Builder(this)
+            .setTitle(titleResId)
+            .setMessage(messageResId)
+            .setPositiveButton(android.R.string.ok, null)
+            .show();
     }
 
     @Override
@@ -300,6 +312,8 @@ public final class TermuxActivity extends Activity implements ServiceConnection 
         if (mIsInvalidState) return;
 
         mIsVisible = false;
+
+        VpnKillSwitch.setWarningPresenter(null);
 
         if (mTermuxTerminalSessionClient != null)
             mTermuxTerminalSessionClient.onStop();

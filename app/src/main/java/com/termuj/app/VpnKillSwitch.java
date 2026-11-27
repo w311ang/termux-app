@@ -7,6 +7,8 @@ import android.net.NetworkCapabilities;
 import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.os.Looper;
+import android.os.Process;
 import android.system.ErrnoException;
 import android.system.Os;
 import android.system.OsConstants;
@@ -16,6 +18,9 @@ import androidx.annotation.NonNull;
 import com.termuj.R;
 import com.termuj.shared.logger.Logger;
 import com.termuj.shared.settings.preferences.TermuxAppSharedPreferences;
+
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 /**
  * Kills every other process running under the app's uid (all shells and programs started from
@@ -67,6 +72,90 @@ public final class VpnKillSwitch {
         } catch (RuntimeException e) {
             Logger.logStackTraceWithMessage(LOG_TAG, "Failed to register default network callback", e);
         }
+
+        final Context appContext = context.getApplicationContext();
+        ForcedVpnMonitor.start(Process.myUid(), forced -> onForcedVpnStateChanged(appContext, forced));
+    }
+
+
+
+    /*
+     * Forced VPN ("require VPN" lock for the app uid, see ForcedVpnMonitor) warnings.
+     *
+     * Warnings are shown as dialogs in TermuxActivity while it is visible. A warning raised while it
+     * is not visible is kept and shown when the user comes back to it; the app never brings itself
+     * to the foreground.
+     */
+
+    /** Shows a warning dialog. Implemented by the visible TermuxActivity. */
+    public interface WarningPresenter {
+        void showVpnWarning(int titleResId, int messageResId);
+    }
+
+    private static final Handler sMainHandler = new Handler(Looper.getMainLooper());
+
+    /** Last known forced VPN state, {@code null} if unknown. */
+    private static volatile Boolean sForcedVpn;
+    /** The user chose to start anyway without forced VPN; don't ask again for this process. */
+    private static volatile boolean sForcedVpnMissingAcknowledged;
+
+    /** Main thread only. */
+    private static WarningPresenter sWarningPresenter;
+    private static final Set<Integer> sPendingWarnings = new LinkedHashSet<>();
+    private static final int WARNING_FORCED_VPN_REMOVED = 0;
+    private static final int WARNING_LEAK_AFTER_DISCONNECT = 1;
+
+    /** Called on the main thread when TermuxActivity becomes visible ({@code presenter}) or hidden ({@code null}). */
+    public static void setWarningPresenter(WarningPresenter presenter) {
+        sWarningPresenter = presenter;
+        if (presenter == null) return;
+        for (int warning : sPendingWarnings)
+            showWarning(presenter, warning);
+        sPendingWarnings.clear();
+    }
+
+    /**
+     * Whether to ask the user before starting the first shell: the kill switch is enabled, a VPN is
+     * active, but the kernel "require VPN" lock is not enabled for the app, and the user hasn't
+     * already chosen to start anyway.
+     */
+    public static boolean shouldWarnForcedVpnMissing(@NonNull Context context) {
+        if (sForcedVpnMissingAcknowledged || !isKillSwitchEnabled(context)) return false;
+        return Boolean.FALSE.equals(ForcedVpnMonitor.queryForced(Process.myUid()));
+    }
+
+    public static void acknowledgeForcedVpnMissing() {
+        sForcedVpnMissingAcknowledged = true;
+    }
+
+    private static void onForcedVpnStateChanged(Context context, Boolean forced) {
+        Boolean previous = sForcedVpn;
+        sForcedVpn = forced;
+        if (Boolean.TRUE.equals(previous) && Boolean.FALSE.equals(forced) && isKillSwitchEnabled(context)) {
+            Logger.logInfo(LOG_TAG, "Forced VPN was removed for the app uid");
+            raiseWarning(WARNING_FORCED_VPN_REMOVED);
+        }
+    }
+
+    private static void raiseWarning(int warning) {
+        sMainHandler.post(() -> {
+            if (sWarningPresenter != null)
+                showWarning(sWarningPresenter, warning);
+            else
+                sPendingWarnings.add(warning);
+        });
+    }
+
+    private static void showWarning(WarningPresenter presenter, int warning) {
+        if (warning == WARNING_FORCED_VPN_REMOVED)
+            presenter.showVpnWarning(R.string.title_forced_vpn_removed, R.string.msg_forced_vpn_removed);
+        else if (warning == WARNING_LEAK_AFTER_DISCONNECT)
+            presenter.showVpnWarning(R.string.title_vpn_leak_possible, R.string.msg_vpn_leak_possible);
+    }
+
+    private static boolean isKillSwitchEnabled(Context context) {
+        TermuxAppSharedPreferences preferences = TermuxAppSharedPreferences.build(context);
+        return preferences != null && preferences.shouldKillProcessesOnVpnDisconnect();
     }
 
     /**
@@ -169,6 +258,14 @@ public final class VpnKillSwitch {
 
         Logger.logInfo(LOG_TAG, "VPN disconnected (" + reason + "), killed all app processes");
         Logger.showToast(mContext, mContext.getString(R.string.msg_vpn_kill_switch_triggered), true);
+
+        // Without the kernel "require VPN" lock, traffic could have left directly in the window
+        // between the VPN going down and the kill above.
+        Boolean forced = ForcedVpnMonitor.queryForced(Process.myUid());
+        if (Boolean.FALSE.equals(forced)) {
+            Logger.logInfo(LOG_TAG, "Forced VPN was not enabled when the VPN disconnected");
+            raiseWarning(WARNING_LEAK_AFTER_DISCONNECT);
+        }
     }
 
 }

@@ -337,6 +337,8 @@ public class TermuxTerminalSessionClient extends TermuxTerminalSessionClientBase
 
         if (VpnKillSwitch.shouldBlockExecution(mActivity)) {
             showVpnNotConnectedDialog(service, isFailSafe, sessionName);
+        } else if (service.isTermuxSessionsEmpty() && VpnKillSwitch.shouldWarnForcedVpnMissing(mActivity)) {
+            showForcedVpnMissingDialog(isFailSafe, sessionName);
         } else if (service.getTermuxSessionsSize() >= MAX_SESSIONS) {
             new AlertDialog.Builder(mActivity).setTitle(R.string.title_max_terminals_reached).setMessage(R.string.msg_max_terminals_reached)
                 .setPositiveButton(android.R.string.ok, null).show();
@@ -379,6 +381,24 @@ public class TermuxTerminalSessionClient extends TermuxTerminalSessionClientBase
             .setNegativeButton(noSessions ? R.string.action_vpn_exit : android.R.string.cancel, (dialog, which) -> {
                 if (noSessions) mActivity.finishActivityIfNotFinishing();
             })
+            .show();
+    }
+
+    /**
+     * The VPN is connected but the kernel "require VPN" lock isn't enabled for the app, so traffic
+     * could leak in the window between a VPN drop and the kill switch. The user may start anyway.
+     */
+    private void showForcedVpnMissingDialog(boolean isFailSafe, String sessionName) {
+        new AlertDialog.Builder(mActivity)
+            .setTitle(R.string.title_forced_vpn_missing)
+            .setMessage(R.string.msg_forced_vpn_missing)
+            .setCancelable(false)
+            .setPositiveButton(R.string.action_forced_vpn_start_anyway, (dialog, which) -> {
+                VpnKillSwitch.acknowledgeForcedVpnMissing();
+                addNewSession(isFailSafe, sessionName);
+            })
+            .setNeutralButton(R.string.action_vpn_retry, (dialog, which) -> addNewSession(isFailSafe, sessionName))
+            .setNegativeButton(R.string.action_vpn_exit, (dialog, which) -> mActivity.finishActivityIfNotFinishing())
             .show();
     }
 
