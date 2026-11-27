@@ -18,11 +18,13 @@ import java.util.Objects;
  * Detects whether the kernel-level "require VPN" lock is enabled for a uid, and gets notified the
  * moment it is added or removed, without polling.
  *
- * Both the per-app lock ({@code ConnectivityManager#setRequireVpnForUids}, e.g. set from a shell with
- * {@code service call connectivity ...}) and the Always-on VPN "Block connections without VPN"
- * lockdown are implemented by netd as policy routing rules of type {@code prohibit} with a uid range
- * ({@code ip rule: 14000: from all ... uidrange A-B prohibit}), one for IPv4 and one for IPv6. The
- * lock counts as enabled when a prohibit rule covering the uid exists for both families.
+ * The lock can come from either of two sources, and either one alone is enough: the per-app lock
+ * ({@code ConnectivityManager#setRequireVpnForUids}, e.g. set from a shell with
+ * {@code service call connectivity ...}), or Always-on VPN with "Block connections without VPN"
+ * (which calls the same API for whole uid ranges). Both end up as the same netd policy routing rules
+ * of type {@code prohibit} with a uid range ({@code ip rule: 14000: from all ... uidrange A-B prohibit}),
+ * so the source can't be told apart and doesn't matter. The lock counts as enabled when any such rule
+ * covers the uid in both IPv4 and IPv6 (one family alone would still let the other leak).
  *
  * State is read with a NETLINK_ROUTE RTM_GETRULE dump, and changes are received by joining the
  * RTNLGRP_IPV4_RULE / RTNLGRP_IPV6_RULE multicast groups: the kernel pushes RTM_NEWRULE /
