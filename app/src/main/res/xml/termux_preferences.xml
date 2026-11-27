@@ -15,4 +15,17 @@
         app:summary="@string/termux_terminal_view_preferences_summary"
         app:fragment="com.termuj.app.fragments.settings.termux.TerminalViewPreferencesFragment"/>
 
+    <PreferenceCategory
+        app:key="network"
+        app:title="@string/termux_network_header">
+
+        <SwitchPreferenceCompat
+            app:key="kill_processes_on_vpn_disconnect"
+            app:defaultValue="true"
+            app:summaryOff="@string/termux_kill_processes_on_vpn_disconnect_off"
+            app:summaryOn="@string/termux_kill_processes_on_vpn_disconnect_on"
+            app:title="@string/termux_kill_processes_on_vpn_disconnect_title" />
+
+    </PreferenceCategory>
+
 </PreferenceScreen>

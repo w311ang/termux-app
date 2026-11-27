@@ -180,6 +180,42 @@
                     no hardware keyboard is connected.</string>
 
 
+        <!-- Network Category -->
+        <string name="termux_network_header">Network</string>
+
+            <!-- Kill Processes On VPN Disconnect -->
+            <string name="termux_kill_processes_on_vpn_disconnect_title">Kill Processes On VPN Disconnect</string>
+            <string name="termux_kill_processes_on_vpn_disconnect_off">Processes keep running when the VPN
+                disconnects and may connect to the network directly.</string>
+            <string name="termux_kill_processes_on_vpn_disconnect_on">Immediately kill all &TERMUX_APP_NAME;
+                processes when the VPN disconnects, and refuse to start any shell or command while no VPN
+                is connected, to avoid leaking connections outside the VPN. (Default)</string>
+            <string name="msg_vpn_kill_switch_triggered">VPN disconnected: all &TERMUX_APP_NAME; processes were killed</string>
+            <string name="msg_vpn_kill_switch_blocked_execution">VPN is not connected: refusing to start &TERMUX_APP_NAME; processes</string>
+            <string name="title_vpn_not_connected">VPN Not Connected</string>
+            <string name="msg_vpn_not_connected">\"Kill Processes On VPN Disconnect\" is enabled and no VPN is
+                connected, so no shell was started. Connect the VPN and retry, or turn the setting off.</string>
+            <string name="action_vpn_retry">Retry</string>
+            <string name="action_vpn_open_settings">Settings</string>
+            <string name="action_vpn_exit">Exit</string>
+
+            <!-- Forced VPN ("require VPN" lock) warnings -->
+            <string name="title_forced_vpn_missing">Forced VPN Not Enabled</string>
+            <string name="msg_forced_vpn_missing">The VPN is connected, but the kernel \"require VPN\" lock
+                (per-app setRequireVpnForUids, or Always-on VPN with \"Block connections without VPN\") is not
+                enabled for &TERMUX_APP_NAME;. If the VPN drops, traffic may leak in the short window before
+                all processes are killed.</string>
+            <string name="action_forced_vpn_start_anyway">Start Anyway</string>
+            <string name="title_forced_vpn_removed">Forced VPN Disabled</string>
+            <string name="msg_forced_vpn_removed">The \"require VPN\" lock for &TERMUX_APP_NAME; was removed.
+                If the VPN disconnects, traffic may leak in the short window before all processes are
+                killed.</string>
+            <string name="title_vpn_leak_possible">Possible Traffic Leak</string>
+            <string name="msg_vpn_leak_possible">The VPN disconnected and all &TERMUX_APP_NAME; processes were
+                killed, but the \"require VPN\" lock was not enabled, so traffic may have leaked in the window
+                between the VPN going down and the kill.</string>
+
+
         <!-- Terminal View Preferences -->
         <string name="termux_terminal_view_preferences_title">Terminal View</string>
         <string name="termux_terminal_view_preferences_summary">Preferences for terminal view</string>
